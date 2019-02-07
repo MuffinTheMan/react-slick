@@ -41,6 +41,7 @@ export class InnerSlider extends React.Component {
     this.callbackTimers = [];
     this.clickable = true;
     this.debouncedResize = null;
+    this.innerSliderRef = React.createRef();
   }
   listRefHandler = ref => (this.list = ref);
   trackRefHandler = ref => (this.track = ref);
@@ -276,15 +277,15 @@ export class InnerSlider extends React.Component {
     let childrenCount = React.Children.count(this.props.children);
     const spec = { ...this.props, ...this.state, slideCount: childrenCount };
     let slideCount = getPreClones(spec) + getPostClones(spec) + childrenCount;
-    let trackWidth = 100 / this.props.slidesToShow * slideCount;
+    let trackWidth = (100 / this.props.slidesToShow) * slideCount;
     let slideWidth = 100 / slideCount;
     let trackLeft =
-      -slideWidth *
-      (getPreClones(spec) + this.state.currentSlide) *
-      trackWidth /
+      (-slideWidth *
+        (getPreClones(spec) + this.state.currentSlide) *
+        trackWidth) /
       100;
     if (this.props.centerMode) {
-      trackLeft += (100 - slideWidth * trackWidth / 100) / 2;
+      trackLeft += (100 - (slideWidth * trackWidth) / 100) / 2;
     }
     let trackStyle = {
       width: trackWidth + "%",
@@ -296,7 +297,8 @@ export class InnerSlider extends React.Component {
     });
   };
   checkImagesLoad = () => {
-    let images = document.querySelectorAll(".slick-slide img");
+    // Only select images inside this particular InnerSlider Component, since there may be more than one on a page.
+    let images = this.innerSliderRef.current.querySelectorAll("img");
     let imagesCount = images.length,
       loadedCount = 0;
     Array.prototype.forEach.call(images, image => {
@@ -304,7 +306,11 @@ export class InnerSlider extends React.Component {
         ++loadedCount && loadedCount >= imagesCount && this.onWindowResized();
       if (!image.onclick) {
         image.onclick = () => image.parentNode.focus();
-      } else {
+      } else if (
+        !image.onclick.toString().includes("image.parentNode.focus();")
+      ) {
+        // Only add our new onclick handler to a previous onclick handler if it
+        // doesn't appear to be already there.
         const prevClickHandler = image.onclick;
         image.onclick = () => {
           prevClickHandler();
@@ -711,6 +717,7 @@ export class InnerSlider extends React.Component {
     };
 
     let innerSliderProps = {
+      ref: this.innerSliderRef,
       className: className,
       dir: "ltr"
     };
